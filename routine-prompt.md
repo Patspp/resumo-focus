@@ -1,100 +1,69 @@
-# Roteiro semanal — Resumo do Boletim Focus
+Você está executando a Routine de resumo semanal do Focus.
 
-Este arquivo é o roteiro executado por uma automação agendada toda semana.
-Siga os passos em ordem. Em caso de parada antecipada, não gere nenhum arquivo de saída.
+O download do PDF e a extração do texto já foram feitos por um GitHub
+Action mais cedo (segunda 9h15 BRT). Os arquivos
+`data/focus_AAAA-MM-DD.{pdf,txt}` já estão commitados em `main` quando
+a Routine inicia. Sua tarefa é ler o `.txt` mais recente, gerar um
+resumo em HTML com a logo da Análise Macro e publicá-lo no repositório.
 
----
+## Passos
 
-## Passo 1 — Localizar o texto extraído
+1. **Localize o `.txt` mais recente.** Liste `data/focus_*.txt` e pegue
+   o de data mais alta. Se não houver nenhum, pare sem commitar o HTML —
+   o Action não rodou.
 
-Procure o arquivo mais recente que corresponda ao padrão `data/focus_*.txt`.
+2. **Verifique frescor.** Extraia a data do nome e compare com hoje:
+   - 0 a 3 dias: está fresco, siga.
+   - 4 a 7 dias: siga, mas escreva `[REVISAR]` no início do assunto.
+   - Mais de 7 dias: pare sem commitar o HTML.
 
-- Se **não houver nenhum arquivo**, pare imediatamente sem fazer nada.
-  O pipeline de download pode não ter rodado ainda esta semana.
+3. **Sanity check do texto.** Confirme: pelo menos 2 000 caracteres e
+   presença das palavras `IPCA`, `Selic`, `PIB`. Se falhar, o layout do
+   PDF pode ter mudado — pare sem commitar o HTML.
 
----
+4. **Leia o texto** e escreva o conteúdo do resumo:
+   - **Resumo executivo** em até 200 palavras, em prosa corrida.
+     Comece pelas medianas das principais variáveis (IPCA do ano,
+     Selic fim de ano, PIB, câmbio). Cite literalmente entre aspas
+     quando houver número-chave.
+   - **Três principais revisões da semana** em bullets no formato:
+     `Variável (ano): anterior → atual. Hipótese: motivo.`
+   - Nunca invente número. Se não houver hipótese sólida, escreva
+     "sem hipótese clara — pode ser ruído amostral".
 
-## Passo 2 — Verificar o frescor do arquivo
+5. **Monte o HTML** em `output/focus/focus_AAAA-MM-DD.html`, com
+   esta estrutura:
+   - No topo, a logo da Análise Macro, carregada desta URL:
+     `https://analisemacro.com.br/wp-content/uploads/dlm_uploads/2021/10/logo_am.png`
+   - Um título `Focus — AAAA-MM-DD`.
+   - O resumo executivo em parágrafo e as três revisões em lista.
+   - Use as cores da marca: azul `#282f6b` nos títulos.
 
-Extraia a data do nome do arquivo (formato `focus_AAAA-MM-DD.txt`) e calcule
-quantos dias se passaram desde a data de publicação até hoje.
+6. **Inspecione** o HTML gerado: a logo aparece, as medianas batem com
+   o `.txt`, há ao menos uma citação literal entre aspas.
 
-| Faixa | Ação |
-|---|---|
-| 0 a 3 dias | Prosseguir normalmente. |
-| 4 a 7 dias | Prosseguir, mas adicionar no topo do resumo gerado: `> **Atenção:** boletim com X dias — pode haver uma edição mais recente.` |
-| Mais de 7 dias | Parar. O boletim está desatualizado demais para gerar um resumo confiável. |
+7. **Publique o HTML** fazendo commit e push para `main`:
 
----
+   ```
+   git add output/focus/focus_AAAA-MM-DD.html
+   git commit -m "resumo: Focus AAAA-MM-DD"
+   git push origin main
+   ```
 
-## Passo 3 — Sanity check do conteúdo
+   Esse push dispara automaticamente o Action `.github/workflows/focus-enviar.yml`,
+   que lê o HTML, monta o e-mail e envia via SMTP do Gmail. O remetente,
+   o destinatário e a senha de app ficam nos Secrets do repositório
+   (`FOCUS_SMTP_USER`, `FOCUS_SMTP_APP_PASSWORD`, `FOCUS_EMAIL_DEST`,
+   `FOCUS_EMAIL_BCC`) — nunca neste arquivo nem no código.
 
-Leia o arquivo `.txt` e verifique:
+## Falhas
 
-1. O texto tem **pelo menos 2 000 caracteres**. Se não tiver, o PDF pode ter
-   sido mal extraído ou o layout do BCB mudou — pare.
-2. O texto contém as três palavras-chave obrigatórias (busca case-insensitive):
-   - `IPCA`
-   - `Selic`
-   - `PIB`
+Em qualquer cenário abaixo, pare sem commitar o HTML. O motivo aparece no
+transcript da Routine. Como o push não ocorre, o Action de envio também
+não dispara — nada é enviado.
 
-   Se qualquer uma estiver ausente, o layout provavelmente mudou e o resumo
-   seria incompleto — pare e registre quais palavras estão faltando.
+- Nenhum `.txt` em `data/` (Action não rodou).
+- `.txt` com mais de 7 dias (Action quebrado).
+- Sanity check do texto falhou (mudança de layout do PDF).
 
----
-
-## Passo 4 — Gerar o resumo executivo
-
-Leia o texto completo e produza um documento markdown com as duas seções abaixo.
-
-**Regra absoluta:** nunca invente nem interpole números. Toda mediana,
-projeção ou variação percentual citada deve estar textualmente presente
-no arquivo `.txt`. Se um valor não aparecer no texto, escreva
-"não divulgado nesta edição" em vez de estimar.
-
-### Seção A — Resumo executivo (até 200 palavras)
-
-- Comece pelas **medianas principais** da edição: IPCA (ano corrente e
-  próximo), Selic (fim de ano), PIB (ano corrente) e câmbio (fim de ano),
-  nessa ordem, se disponíveis.
-- Em seguida, destaque em até dois parágrafos o que mais mudou em relação
-  à edição anterior, conforme indicado no próprio texto do boletim.
-- Mantenha linguagem direta e factual. Evite adjetivos avaliativos
-  ("surpreendente", "preocupante") que não estejam no texto.
-
-### Seção B — Três principais revisões da semana
-
-Liste as três revisões de expectativa mais relevantes da edição (para cima
-ou para baixo), cada uma no formato:
-
-```
-**[Indicador]:** de X% para Y% [ano de referência]
-*Hipótese de motivo:* [uma frase explicando o possível fator, baseada no
-contexto do próprio texto. Se o texto não oferecer pistas, escreva
-"motivo não identificado no texto".]
-```
-
-Ordene da revisão de maior magnitude (em pontos percentuais absolutos)
-para a de menor.
-
----
-
-## Passo 5 — Salvar o resultado
-
-Salve o markdown gerado em:
-
-```
-output/focus/focus_AAAA-MM-DD.md
-```
-
-onde `AAAA-MM-DD` é a data extraída do nome do arquivo `.txt` de origem.
-
-O arquivo deve começar com o cabeçalho:
-
-```markdown
-# Focus BCB — AAAA-MM-DD
-
-> Fonte: `data/focus_AAAA-MM-DD.txt`
-```
-
-seguido das seções A e B do Passo 4.
+Nunca invente número.
