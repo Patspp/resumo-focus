@@ -5,6 +5,9 @@ on:
     - cron: "15 12 * * 1"  # toda segunda às 12h15 UTC (9h15 BRT)
   workflow_dispatch:        # permite disparo manual pela interface do GitHub
 
+permissions:
+  contents: write
+
 jobs:
   baixar-e-extrair:
     runs-on: ubuntu-latest
