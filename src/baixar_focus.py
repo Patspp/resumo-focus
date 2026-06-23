@@ -15,14 +15,8 @@ MAX_TENTATIVAS = 7
 
 
 def ultima_segunda(hoje: datetime.date) -> datetime.date:
-    """Retorna a segunda-feira mais recente ESTRITAMENTE anterior a `hoje`.
-
-    Se `hoje` for segunda-feira, retrocede para a segunda da semana passada.
-    """
-    # weekday(): segunda=0, domingo=6
-    # Quantos dias voltar para chegar na última segunda (sem incluir hoje)
-    dias_ate_segunda = (hoje.weekday() + 6) % 7 + 1
-    return hoje - datetime.timedelta(days=dias_ate_segunda)
+    """Retorna a segunda-feira mais recente, incluindo hoje se for segunda."""
+    return hoje - datetime.timedelta(days=hoje.weekday())
 
 
 def baixar(dest: Path | str) -> tuple[datetime.date, Path]:
