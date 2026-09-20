@@ -29,9 +29,9 @@ def test_ultima_segunda_terca():
 
 
 def test_ultima_segunda_quando_hoje_e_segunda():
-    """Se hoje é segunda, deve retornar a segunda da semana passada (7 dias antes)."""
+    """Se hoje é segunda, retorna hoje (o boletim é publicado na própria segunda)."""
     segunda = datetime.date(2026, 6, 1)     # segunda-feira
-    assert ultima_segunda(segunda) == datetime.date(2026, 5, 25)
+    assert ultima_segunda(segunda) == segunda
 
 
 def test_ultima_segunda_domingo():
@@ -42,7 +42,7 @@ def test_ultima_segunda_domingo():
 
 def test_ultima_segunda_varredura_60_dias():
     """Para qualquer dia nos próximos 60 dias, o retorno é sempre uma
-    segunda-feira estritamente anterior à data fornecida."""
+    segunda-feira, no máximo igual à data fornecida e a menos de 7 dias dela."""
     hoje = datetime.date.today()
     for delta in range(60):
         data = hoje + datetime.timedelta(days=delta)
@@ -51,10 +51,31 @@ def test_ultima_segunda_varredura_60_dias():
         assert resultado.weekday() == 0, (
             f"{data} → {resultado} não é segunda-feira"
         )
-        # O resultado deve ser estritamente anterior à data dada
-        assert resultado < data, (
-            f"{data} → {resultado} não é estritamente anterior"
+        assert 0 <= (data - resultado).days < 7, (
+            f"{data} → {resultado} fora da janela de 7 dias"
         )
+
+
+# ---------------------------------------------------------------------------
+# baixar() sem rede real — feriado / boletim ainda não publicado
+# ---------------------------------------------------------------------------
+
+def test_baixar_retorna_none_quando_nada_publicado(tmp_path, monkeypatch):
+    """Sem PDF em nenhuma das datas candidatas, baixar() devolve None (não levanta)."""
+    import baixar_focus
+
+    class RespostaVazia:
+        status_code = 404
+        content = b""
+
+    class SessaoFalsa:
+        headers: dict = {}
+
+        def get(self, url, timeout):
+            return RespostaVazia()
+
+    monkeypatch.setattr(baixar_focus.requests, "Session", SessaoFalsa)
+    assert baixar(tmp_path) is None
 
 
 # ---------------------------------------------------------------------------

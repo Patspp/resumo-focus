@@ -2,11 +2,18 @@ name: Focus – Download e Extração
 
 on:
   schedule:
-    - cron: "15 12 * * 1"  # toda segunda às 12h15 UTC (9h15 BRT)
+    # O cron do GitHub atrasa (até horas) e às vezes pula execuções, e o BCB
+    # publica na terça quando a segunda é feriado. Por isso roda de segunda a
+    # quarta, várias vezes ao dia (UTC). É idempotente: sem PDF novo, não commita.
+    - cron: "15 12,15,18,21 * * 1-3"
   workflow_dispatch:        # permite disparo manual pela interface do GitHub
 
 permissions:
   contents: write
+
+concurrency:
+  group: focus-download
+  cancel-in-progress: false
 
 jobs:
   baixar-e-extrair:
@@ -39,4 +46,5 @@ jobs:
           # --diff-index falha silenciosamente se não houver mudança; o "|| true"
           # impede que o passo falhe quando nada foi baixado
           git diff --cached --quiet || git commit -m "chore: Focus $(date -u +%Y-%m-%d)"
+          git pull --rebase
           git push

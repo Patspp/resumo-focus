@@ -1,0 +1,33 @@
+name: Focus – Vigia do Pipeline
+
+# Confere se o boletim da semana foi baixado, extraído e resumido. Se não,
+# o workflow FALHA (o GitHub avisa por e-mail) e envia um alerta por SMTP.
+
+on:
+  schedule:
+    - cron: "30 23 * * 2"  # terça 20h30 BRT: depois de todas as tentativas de seg/ter
+    - cron: "0 12 * * 4"   # quinta 9h BRT: segunda chance, ainda dentro da janela
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Verificar pipeline
+        env:
+          FOCUS_SMTP_USER:         ${{ secrets.FOCUS_SMTP_USER }}
+          FOCUS_SMTP_APP_PASSWORD: ${{ secrets.FOCUS_SMTP_APP_PASSWORD }}
+        run: python src/verificar_pipeline.py

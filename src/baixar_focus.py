@@ -19,14 +19,16 @@ def ultima_segunda(hoje: datetime.date) -> datetime.date:
     return hoje - datetime.timedelta(days=hoje.weekday())
 
 
-def baixar(dest: Path | str) -> tuple[datetime.date, Path]:
+def baixar(dest: Path | str) -> tuple[datetime.date, Path] | None:
     """Baixa o PDF do Focus mais recente para a pasta `dest`.
 
     Parte da última segunda-feira e recua dia a dia até encontrar
     um PDF válido (máximo de MAX_TENTATIVAS tentativas, cobrindo feriados).
 
-    Retorna uma tupla (data_da_publicacao, caminho_do_arquivo).
-    Levanta RuntimeError se nenhuma tentativa for bem-sucedida.
+    Retorna uma tupla (data_da_publicacao, caminho_do_arquivo), ou None se
+    nenhum PDF foi encontrado (ex.: segunda-feira feriado, boletim só sai na
+    terça). Quem detecta a ausência prolongada é o vigia (verificar_pipeline.py);
+    o workflow roda várias vezes por semana e tenta de novo.
     """
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
@@ -55,14 +57,19 @@ def baixar(dest: Path | str) -> tuple[datetime.date, Path]:
         # PDF não encontrado nesta data; recua um dia
         data_candidata -= datetime.timedelta(days=1)
 
-    raise RuntimeError(
-        f"Nenhum PDF do Focus encontrado após {MAX_TENTATIVAS} tentativas."
-    )
+    return None
 
 
 def main() -> None:
     pasta_data = Path(__file__).parent.parent / "data"
-    data_pub, caminho = baixar(pasta_data)
+    resultado = baixar(pasta_data)
+    if resultado is None:
+        print(
+            f"\nNenhum PDF novo após {MAX_TENTATIVAS} tentativas "
+            "(boletim ainda não publicado?). Nova tentativa na próxima execução."
+        )
+        return
+    data_pub, caminho = resultado
     tamanho_kb = caminho.stat().st_size / 1024
     print(f"\nPublicação: {data_pub.isoformat()}")
     print(f"Arquivo:    {caminho}")

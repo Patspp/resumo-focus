@@ -50,5 +50,9 @@ summarize_focus.py  →  output/focus/focus_AAAA-MM-DD.md
 
 ## Agendamento
 
-- GitHub Actions dispara toda segunda-feira às 14h (horário de Brasília / UTC-3 → 17h UTC).
-- Em caso de falha, retentar até 2 vezes com intervalo de 30 minutos.
+O GitHub Actions (cron) atrasa por horas e às vezes pula execuções; o BCB publica na terça quando a segunda é feriado. Por isso tudo roda **várias vezes, de segunda a quarta**, e cada etapa é idempotente:
+
+- `focus-download.yml`: 12h15, 15h15, 18h15 e 21h15 UTC (seg–qua). Sem PDF novo, não commita.
+- Routine `resumo-focus` (claude.ai): 12h45, 15h45, 18h45 e 21h45 UTC (seg–qua). Resume o `.txt` mais recente só se ainda não houver `output/focus/focus_AAAA-MM-DD.html`. Prompt em `routine-prompt.md`.
+- `focus-enviar.yml`: dispara no push do HTML e envia o e-mail.
+- `focus-verificar.yml` (vigia): terça 23h30 UTC e quinta 12h UTC. Falha e envia alerta por e-mail se o boletim mais recente não foi baixado, extraído e resumido.
